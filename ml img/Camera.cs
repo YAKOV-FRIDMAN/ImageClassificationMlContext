@@ -70,6 +70,7 @@ namespace ml_img
                     BitmapImage = bi;
                     UpBitmap?.Invoke(this, new EventArgs());
                 });
+                //LocalWebCam.Stop();
             }
             catch (Exception ex)
             {
@@ -97,15 +98,12 @@ namespace ml_img
 
         public void SaveImageInStop()
         {
-            img.Save(@"C:\Users\user1\Pictures\testimg1.png", ImageFormat.Png);
-            ImagePath = @"C:\Users\user1\Pictures\testimg1.png";
-           // LocalWebCam.Stop();
+            string fileName = System.IO.Path.GetTempFileName();
+            System.IO.File.Create(fileName).Close();
+            img.Save(fileName, ImageFormat.Png);
+            ImagePath = fileName;
+            LocalWebCam.SignalToStop();
         }
-
-
-
-
-
 
 
         public event PropertyChangedEventHandler PropertyChanged;

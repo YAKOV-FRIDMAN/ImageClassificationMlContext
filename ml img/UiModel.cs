@@ -33,7 +33,8 @@ namespace ml_img
         public bool IsVisibilityImage
         {
             get { return _isVisibilityImage; }
-            set {
+            set
+            {
                 _isVisibilityImage = value;
                 PropertyChangedFunc(nameof(IsVisibilityImage));
 
@@ -128,7 +129,8 @@ namespace ml_img
                 IsVisibilityCamera = true;
                 IsVisibilityImage = false;
                 BitmapImage = camera.BitmapImage;
-                camera.UpBitmap += (o, e) => {
+                camera.UpBitmap += (o, e) =>
+                {
 
                     BitmapImage = camera.BitmapImage;
 
