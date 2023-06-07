@@ -7,6 +7,8 @@ using System.Text;
 using System.IO;
 using Microsoft.ML;
 using DwImgApiML.Model;
+using Microsoft.ML.Data;
+using Microsoft.ML.Trainers;
 
 namespace DwImgApiML.Model
 {
@@ -23,6 +25,58 @@ namespace DwImgApiML.Model
             ModelOutput result = PredictionEngine.Value.Predict(input);
             return result;
         }
+        
+        public static void SetFeedback(ModelInput input)
+        {
+            // Create new MLContext
+            MLContext mlContext = new MLContext();
+
+            // Load model & create prediction engine
+            ITransformer mlModel = mlContext.Model.Load(MLNetModelPath, out var modelInputSchema);
+
+            // Load New Data
+            IDataView newData = mlContext.Data.LoadFromEnumerable<ModelInput>(new List<ModelInput>() { input });
+            IDataView transformedNewData = mlModel.Transform(newData);
+
+            // Extract trained model parameters
+            LinearRegressionModelParameters originalModelParameters =
+                ((ISingleFeaturePredictionTransformer<object>)mlModel).Model as LinearRegressionModelParameters;
+
+            // Retrain model
+            RegressionPredictionTransformer<LinearRegressionModelParameters> retrainedModel =
+                mlContext.Regression.Trainers.OnlineGradientDescent()
+                    .Fit(transformedNewData, originalModelParameters);
+
+            // Save the retrained model
+            mlContext.Model.Save(retrainedModel, modelInputSchema, MLNetModelPath);
+            PredictionEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(CreatePredictionEngine);
+        }
+
+        public void AddDataAndRetrain(ModelInput newInputData)
+        {
+            // Create new MLContext
+            MLContext mlContext = new MLContext();
+
+            // Load existing data
+            IDataView existingData = mlContext.Data.LoadFromTextFile<ModelInput>("existingData.csv");
+
+            // Add new data
+            IDataView newData = mlContext.Data.LoadFromEnumerable(new List<ModelInput> { newInputData });
+            //IDataView combinedData = mlContext.Data.Concatenate("CombinedData", existingData, newData);
+
+            //// Define pipeline and train
+            //var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label")
+            //    .Append(mlContext.Transforms.LoadRawImageBytes("ImageSource"))
+            //    .Append(mlContext.Transforms.Dnn.FeaturizeImage("ImageSource"))
+            //    .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"))
+            //    .AppendCacheCheckpoint(mlContext);
+
+            var model = pipeline.Fit(combinedData);
+
+            // Save the new model
+            mlContext.Model.Save(model, combinedData.Schema, "newModel.zip");
+        }
+
 
         public static PredictionEngine<ModelInput, ModelOutput> CreatePredictionEngine()
         {
@@ -32,7 +86,6 @@ namespace DwImgApiML.Model
             // Load model & create prediction engine
             ITransformer mlModel = mlContext.Model.Load(MLNetModelPath, out var modelInputSchema);
             var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(mlModel);
-
             return predEngine;
         }
     }

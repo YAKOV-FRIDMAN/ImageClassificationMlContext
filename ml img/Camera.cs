@@ -51,25 +51,31 @@ namespace ml_img
         {
             try
             {
-
-                img = (Bitmap)eventArgs.Frame.Clone();
-
-                img.RotateFlip(RotateFlipType.RotateNoneFlipX);
-
-                MemoryStream ms = new MemoryStream();
-                img.Save(ms, ImageFormat.Bmp);
-                ms.Seek(0, SeekOrigin.Begin);
-                BitmapImage bi = new BitmapImage();
-                bi.BeginInit();
-                bi.StreamSource = ms;
-                bi.EndInit();
-
-                bi.Freeze();
-                Task.Run(() =>
+                using (var clone = new Bitmap(eventArgs.Frame))
                 {
-                    BitmapImage = bi;
-                    UpBitmap?.Invoke(this, new EventArgs());
-                });
+                    // img = clone;  
+                    // Bitmap to System.Drawing.Image
+                    img = (System.Drawing.Image)clone.Clone();
+
+                    //  img = (Bitmap)eventArgs.Frame.Clone();
+
+                    img.RotateFlip(RotateFlipType.RotateNoneFlipX);
+
+                    MemoryStream ms = new MemoryStream();
+                    img.Save(ms, ImageFormat.Bmp);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    BitmapImage bi = new BitmapImage();
+                    bi.BeginInit();
+                    bi.StreamSource = ms;
+                    bi.EndInit();
+
+                    bi.Freeze();
+                    Task.Run(() =>
+                    {
+                        BitmapImage = bi;
+                        UpBitmap?.Invoke(this, new EventArgs());
+                    });
+                }
                 //LocalWebCam.Stop();
             }
             catch (Exception ex)
@@ -88,7 +94,7 @@ namespace ml_img
                 Debug.WriteLine(item);
             }
             Debug.WriteLine(LoaclWebCamsCollection[0].MonikerString);
-           // Debug.WriteLine(LoaclWebCamsCollection[1].MonikerString);
+            // Debug.WriteLine(LoaclWebCamsCollection[1].MonikerString);
             Debug.WriteLine("------------------stop------------------------");
             LocalWebCam.NewFrame += new NewFrameEventHandler(Cam_NewFrame);
 
@@ -98,11 +104,22 @@ namespace ml_img
 
         public void SaveImageInStop()
         {
-            string fileName = System.IO.Path.GetTempFileName();
-            System.IO.File.Create(fileName).Close();
-            img.Save(fileName, ImageFormat.Png);
-            ImagePath = fileName;
-            LocalWebCam.SignalToStop();
+            lock (img)
+            {
+                // save the image here
+                LocalWebCam.SignalToStop();
+                Task.Delay(1000);
+                string fileName = System.IO.Path.GetTempFileName();
+                System.IO.File.Create(fileName).Close();
+                using (var clone = new Bitmap(img))
+                {
+                    clone.Save(fileName, ImageFormat.Png);
+                }
+
+                // img.Save(fileName, ImageFormat.Png);
+                ImagePath = fileName;
+               /// LocalWebCam.SignalToStop();
+            }
         }
 
 
