@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace ml_img
@@ -44,6 +45,9 @@ namespace ml_img
         public RelayCommand OpenImg { get; set; }
 
         public RelayCommand PhotoTaking { get; set; }
+
+        public RelayCommand SetTrueFeedback { get; set; }
+        public RelayCommand SetFalseFeedback { get; set; }
         public BitmapImage BitmapImage
         {
             get { return bitmapImage; }
@@ -72,6 +76,13 @@ namespace ml_img
                 _isVisibility = value;
                 PropertyChangedFunc(nameof(IsVisibility));
             }
+        }
+        private bool isVisibilityFeedback;
+
+        public bool IsVisibilityFeedback
+        {
+            get { return isVisibilityFeedback; }
+            set { isVisibilityFeedback = value; PropertyChangedFunc(nameof(IsVisibilityFeedback)); }
         }
 
         public string ImageSorc
@@ -117,12 +128,28 @@ namespace ml_img
         {
             OpenImg = new RelayCommand(openImage);
             PhotoTaking = new RelayCommand(PhotoTakingFunc);
+            SetTrueFeedback = new RelayCommand(OnSetTrueFeedback);
+            SetFalseFeedback = new RelayCommand(OnSetFalseFeedback);
             IsVisibilityImage = true;
+        }
+
+        private void OnSetFalseFeedback(object obj)
+        {
+            IsVisibility = true;
+            ConsumeModel.SetFeedback(new ModelInput { ImageSource = ImageSorc, Label = Prediction == "man" ? "woman" : "man" });
+            IsVisibility = false;
+        }
+
+        private void OnSetTrueFeedback(object obj)
+        {
+            IsVisibility = true;
+            ConsumeModel.SetFeedback(new ModelInput { ImageSource = ImageSorc, Label = Prediction == "man" ? "man" : "woman" });
+            IsVisibility = false;
         }
 
         private void PhotoTakingFunc(object obj)
         {
-
+            IsVisibilityFeedback = false;
             if (IsVisibilityCamera == false)
             {
                 ImageSorc = null;
@@ -155,12 +182,14 @@ namespace ml_img
                     ProgMan = predictionResult.Score[0];
                     ProgWoman = predictionResult.Score[1];
                     IsVisibility = false;
+                    IsVisibilityFeedback = true;
                 });
             }
         }
 
         private void openImage(object obj)
         {
+            IsVisibilityFeedback = false;
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
             {
@@ -181,6 +210,7 @@ namespace ml_img
                     ProgMan = predictionResult.Score[0];
                     ProgWoman = predictionResult.Score[1];
                     IsVisibility = false;
+                    IsVisibilityFeedback = true;
                 });
 
             }
